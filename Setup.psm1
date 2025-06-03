@@ -1,4 +1,4 @@
-# Setup.psm1 - Module and tool preparation for ov.ps1
+ï»¿# Setup.psm1 - Module and tool preparation for ov.ps1
 
 # Import utility functions (for Download-File, Extract-Archive)
 Import-Module .\Utils.psm1 -Force
