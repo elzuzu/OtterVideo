@@ -1,4 +1,4 @@
-<#
+ï»¿<#
 .SYNOPSIS
     Script avancé pour le transcodage par lots en VVC (lossless) et audio IAMF,
     avec interface utilisateur, validation, et multithreading via ThreadJob.

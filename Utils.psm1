@@ -1,4 +1,4 @@
-# Utils.psm1 - Utility functions for ov.ps1
+ï»¿# Utils.psm1 - Utility functions for ov.ps1
 
 #region Fonctions Utilitaires
 function Test-CommandExists {

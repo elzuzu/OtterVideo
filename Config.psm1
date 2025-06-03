@@ -1,4 +1,4 @@
-# Config.psm1 - Configuration settings for ov.ps1
+ï»¿# Config.psm1 - Configuration settings for ov.ps1
 # This file will hold parameters, paths, URLs, and default configuration values.
 
 # Chemins et URLs (moved from ov.ps1)

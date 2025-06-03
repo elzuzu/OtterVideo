@@ -1,4 +1,4 @@
-# UI.psm1 - Windows Forms UI for ov.ps1
+ï»¿# UI.psm1 - Windows Forms UI for ov.ps1
 
 # Import utilities (for Validate-Integer, Validate-Bitrate)
 Import-Module .\Utils.psm1 -Force

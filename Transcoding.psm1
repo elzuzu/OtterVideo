@@ -1,4 +1,4 @@
-# Transcoding.psm1 - Core file processing logic for ov.ps1
+ï»¿# Transcoding.psm1 - Core file processing logic for ov.ps1
 
 # Import utility functions (for Run-Process)
 Import-Module .\Utils.psm1 -Force
