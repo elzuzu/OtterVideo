@@ -54,7 +54,7 @@ function Show-MainApplicationWindow {
     function Add-Textbox($name, $y, $text, $width = 200) {
         $textbox = New-Object System.Windows.Forms.TextBox
         $textbox.Name = $name
-        $textbox.Location = New-Object System.Drawing.Point(250, $y - 3)
+        $textbox.Location = New-Object System.Drawing.Point(250, ([int]$y - 3))
         $textbox.Text = $text
         $textbox.Width = $width
         $form.Controls.Add($textbox)
@@ -64,7 +64,7 @@ function Show-MainApplicationWindow {
     function Add-ComboBox($name, $y, $items, $selectedItem, $width = 200) {
         $combobox = New-Object System.Windows.Forms.ComboBox
         $combobox.Name = $name
-        $combobox.Location = New-Object System.Drawing.Point(250, $y - 3)
+        $combobox.Location = New-Object System.Drawing.Point(250, ([int]$y - 3))
         $combobox.Items.AddRange($items)
         $combobox.SelectedItem = $selectedItem
         $combobox.Width = $width
@@ -122,7 +122,7 @@ function Show-MainApplicationWindow {
     Add-Label "Input Directory:" $yPos
     $inputDirTextBox = New-Object System.Windows.Forms.TextBox
     $inputDirTextBox.Name = "inputDirTextBox"
-    $inputDirTextBox.Location = New-Object System.Drawing.Point(150, $yPos -3) # Align with other textboxes
+    $inputDirTextBox.Location = New-Object System.Drawing.Point(150, ([int]$yPos - 3)) # Align with other textboxes
     $inputDirTextBox.Width = 320
     $inputDirTextBox.ReadOnly = $true
     $inputDirTextBox.Text = "Not selected"
@@ -132,7 +132,7 @@ function Show-MainApplicationWindow {
     Add-Label "Output Directory:" $yPos
     $outputDirTextBox = New-Object System.Windows.Forms.TextBox
     $outputDirTextBox.Name = "outputDirTextBox"
-    $outputDirTextBox.Location = New-Object System.Drawing.Point(150, $yPos -3) # Align with other textboxes
+    $outputDirTextBox.Location = New-Object System.Drawing.Point(150, ([int]$yPos - 3)) # Align with other textboxes
     $outputDirTextBox.Width = 320
     $outputDirTextBox.ReadOnly = $true
     $outputDirTextBox.Text = "Not selected"
@@ -173,7 +173,7 @@ function Show-MainApplicationWindow {
     $cancelProcessingButton.Name = "cancelProcessingButton"
     $cancelProcessingButton.Text = "Cancel Processing"
     $cancelProcessingButton.Width = 120
-    $cancelProcessingButton.Location = New-Object System.Drawing.Point($startButton.Right + 10, $yPos)
+    $cancelProcessingButton.Location = New-Object System.Drawing.Point(([int]$startButton.Right + 10), [int]$yPos)
     $cancelProcessingButton.Enabled = $false
     $form.Controls.Add($cancelProcessingButton)
 
@@ -181,7 +181,7 @@ function Show-MainApplicationWindow {
     $closeButton.Name = "closeButton"
     $closeButton.Text = "Close"
     $closeButton.Width = 90
-    $closeButton.Location = New-Object System.Drawing.Point($cancelProcessingButton.Right + 10, $yPos)
+    $closeButton.Location = New-Object System.Drawing.Point(([int]$cancelProcessingButton.Right + 10), [int]$yPos)
     $closeButton.DialogResult = "Cancel" # This will close the form if shown with ShowDialog()
     $form.CancelButton = $closeButton
     $form.Controls.Add($closeButton)
