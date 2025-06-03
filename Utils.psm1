@@ -150,7 +150,7 @@ function Run-Process {
         return @{
             ExitCode = -1 # Or a more specific error code for launch failure
             StdOut   = ""
-            StdErr   = "Failed to start process $FilePath: $($_.Exception.Message)"
+            StdErr   = "Failed to start process ${FilePath}: $($_.Exception.Message)"
         }
     }
 }
