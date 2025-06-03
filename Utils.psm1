@@ -124,30 +124,36 @@ function Run-Process {
     # The original Run-Process directly accessed $Global:config.ShowFFmpegOutput.
     # To maintain that, $Global:config would need to be accessible.
     # Since Config.psm1 exports $Global:config to the global scope, it *should* be accessible.
+    $stdoutLog = Join-Path $env:TEMP "stdout_$([guid]::NewGuid()).txt"
+    $stderrLog = Join-Path $env:TEMP "stderr_$([guid]::NewGuid()).txt"
+
     try {
         $process = Start-Process -FilePath $FilePath -ArgumentList $ArgumentList -Wait -PassThru -NoNewWindow `
-                                 -RedirectStandardError (Join-Path $env:TEMP "stderr_$([guid]::NewGuid()).txt")
+                                 -RedirectStandardOutput $stdoutLog `
+                                 -RedirectStandardError $stderrLog
 
-        $stderrPath = (Get-ChildItem $env:TEMP | Where-Object { $_.Name -like 'stderr_*.txt' } | Sort-Object LastWriteTime | Select-Object -First 1).FullName
-        $stderr = Get-Content $stderrPath -Raw -ErrorAction SilentlyContinue
+        $stdoutContent = Get-Content $stdoutLog -Raw -ErrorAction SilentlyContinue
+        $stderrContent = Get-Content $stderrLog -Raw -ErrorAction SilentlyContinue
 
-        # Check if $Global:config is available and has ShowFFmpegOutput
-        $showOutput = $false
-        if ($Global:config -and $Global:config.ContainsKey('ShowFFmpegOutput')) {
-            $showOutput = $Global:config.ShowFFmpegOutput
-        }
+        Remove-Item $stdoutLog -ErrorAction SilentlyContinue -Force
+        Remove-Item $stderrLog -ErrorAction SilentlyContinue -Force
 
-        if (-not $HideOutput -or $showOutput) {
-            if ($stderr) { Write-Host $stderr }
+        return @{
+            ExitCode = $process.ExitCode
+            StdOut   = $stdoutContent
+            StdErr   = $stderrContent
         }
-        if ($process.ExitCode -ne 0) {
-            Write-Warning "Processus ($FilePath) renvoyé code $($process.ExitCode). Sortie d'erreur:`n$stderr"
-        }
-        Remove-Item $stderrPath -ErrorAction SilentlyContinue -Force
-        return $process.ExitCode
     } catch {
-        Write-Error "Échec de l'exécution de $FilePath : $($_.Exception.Message)"
-        return -1
+        # Ensure temp files are cleaned up even if Start-Process fails to launch
+        if (Test-Path $stdoutLog) { Remove-Item $stdoutLog -ErrorAction SilentlyContinue -Force }
+        if (Test-Path $stderrLog) { Remove-Item $stderrLog -ErrorAction SilentlyContinue -Force }
+
+        Write-Error "Échec du lancement du processus $FilePath : $($_.Exception.Message)"
+        return @{
+            ExitCode = -1 # Or a more specific error code for launch failure
+            StdOut   = ""
+            StdErr   = "Failed to start process $FilePath: $($_.Exception.Message)"
+        }
     }
 }
 #endregion Fonctions Utilitaires
