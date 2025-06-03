@@ -8,10 +8,10 @@ $ffDir = Join-Path $PSScriptRoot "ffmpeg"
 $ffExe = Join-Path $ffDir "bin" "ffmpeg.exe"
 $ffProbeExe = Join-Path $ffDir "bin" "ffprobe.exe"
 
-$iamfToolsUrl = "https://github.com/AOMediaCodec/iamf/releases/latest/download/iamf-tools-windows-latest.zip" # Hypothetical URL
+$iamfToolsUrl = "https://github.com/AOMediaCodec/iamf/releases/latest/download/iamf-tools-windows-latest.zip" # Official URL for IAMF tools
 $iamfToolsZip = Join-Path $PSScriptRoot "iamf-tools.zip"
 $iamfToolsDir = Join-Path $PSScriptRoot "iamf-tools"
-$iamfEncoderExe = Join-Path $iamfToolsDir "iamf-encoder.exe" # Hypothetical path
+$iamfEncoderExe = Join-Path $iamfToolsDir "iamf-encoder.exe" # Path to the IAMF encoder executable
 
 # Valeurs par défaut pour les paramètres configurables
 $Global:config = @{
@@ -25,6 +25,7 @@ $Global:config = @{
     TargetVideoHeight   = 720     # Hauteur cible (entier)
     MaxParallelJobs     = 2       # Nombre de jobs simultanés (entier)
     ShowFFmpegOutput    = $true   # Afficher la sortie complète de ffmpeg
+    ThreadJobAvailable  = $true # Will be set to false by Setup.psm1 if ThreadJob can't be loaded
 }
 
 # Export members

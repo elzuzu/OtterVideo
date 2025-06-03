@@ -15,6 +15,7 @@ function Ensure-ThreadJob {
             Write-Host "ThreadJob installé et importé." -ForegroundColor Green
         } catch {
             Write-Warning "Impossible d'installer ThreadJob : $($_.Exception.Message). Le script va continuer en mode mono-thread."
+            $Global:config.ThreadJobAvailable = $false
         }
     }
 }
@@ -79,6 +80,9 @@ function Prepare-Tools {
 
                 Extract-Archive -ArchivePath $iamfToolsZip -DestinationPath $tempExtractDir -Description "iamf-tools"
 
+                # The IAMF tools archive might contain a versioned top-level directory.
+                # This logic attempts to find that single directory within the temporary extraction path
+                # and then move it to the target $iamfToolsDir.
                 # Find the actual extracted folder (e.g., "iamf-tools-windows-x64")
                 $extractedFolder = Get-ChildItem -Path $tempExtractDir -Directory | Select-Object -First 1
                 if ($extractedFolder) {

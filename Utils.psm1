@@ -114,9 +114,7 @@ function Validate-Bitrate {
 function Run-Process {
     param(
         [string]$FilePath,
-        [array]$ArgumentList,
-        [switch]$HideOutput,
-        [hashtable]$GlobalConfig # Explicitly pass $Global:config if needed, or access it if available
+        [array]$ArgumentList
     )
     # If Run-Process needs to access $Global:config.ShowFFmpegOutput,
     # it must be passed in or Utils.psm1 must also import Config.psm1 (which might be too coupled).

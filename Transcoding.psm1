@@ -154,8 +154,8 @@ function Process-File {
         }
         # Si vidéo seule
         elseif ($hasVideo -and -not $hasAudio) {
-            $videoOnlyArgs = $videoArgs | Where-Object { $_ -ne "-an" } # Should already not contain -an if videoArgs is used as base
-            $ffmpegCmd = $commonArgs + $hwAccelArgs + @("-y", "-i", $inputFile) + $videoOnlyArgs + @($outputFile)
+            # $videoArgs should already contain -an for video-only processing
+            $ffmpegCmd = $commonArgs + $hwAccelArgs + @("-y", "-i", $inputFile) + $videoArgs + @($outputFile)
             if ($config.OutputContainer -eq "MP4") { $ffmpegCmd += @("-movflags", "+faststart") }
             $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegCmd
             if ($config.ShowFFmpegOutput) {
@@ -175,7 +175,8 @@ function Process-File {
             } else {
                 $audioArgsOnly = @("-c:a", "flac")
             }
-            $ffmpegCmd = $commonArgs + @("-y", "-i", $inputFile) + $audioArgsOnly + @($outputFile)
+            # explicitly add -vn
+            $ffmpegCmd = $commonArgs + @("-y", "-i", $inputFile, "-vn") + $audioArgsOnly + @($outputFile)
             $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegCmd
             if ($config.ShowFFmpegOutput) {
                 if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (AudioOnly): $_" } }

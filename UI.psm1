@@ -318,10 +318,11 @@ function Show-MainApplicationWindow {
             $Global:inputRoot = $inDir # Set for Process-File
             $jobList.Clear() # Clear any previous jobs if any
 
-            $logTextBox.AppendText("Starting transcoding process...`n")
-            foreach ($file in $filesToProcess) {
-                while ($jobList.Count -ge $Global:config.MaxParallelJobs) {
-                    $finishedJob = Wait-Job -Job $jobList -Any -Timeout 1 # Timeout 1s for responsiveness
+            if ($Global:config.ThreadJobAvailable) {
+                $logTextBox.AppendText("Starting transcoding process using ThreadJob...`n")
+                foreach ($file in $filesToProcess) {
+                    while ($jobList.Count -ge $Global:config.MaxParallelJobs) {
+                        $finishedJob = Wait-Job -Job $jobList -Any -Timeout 1 # Timeout 1s for responsiveness
                     if ($finishedJob) {
                         foreach ($j in $finishedJob) {
                             # Receive the job's primary output object and keep stream data
@@ -367,7 +368,6 @@ function Show-MainApplicationWindow {
 
                 $jobName = "Transcode_$($file.BaseName)"
                 $jobArguments = $file.FullName, $outDir, $Global:inputRoot, $Global:config, $Global:ffExe, $Global:ffProbeExe, $Global:iamfEncoderExe
-                $scriptBlockPath = Join-Path $PSScriptRoot "Transcoding.psm1" # Assuming Transcoding.psm1 is in the same dir
                 # Need to ensure Process-File is available. If it's in Transcoding.psm1, that module must be imported or use ScriptBlock from file.
                 # For simplicity, assuming Process-File is made available globally or via an imported module.
                 # If Transcoding.psm1 exports Process-File, it should be fine.
@@ -420,6 +420,46 @@ function Show-MainApplicationWindow {
             }
             $logTextBox.AppendText("All transcoding jobs finished.`n")
             [System.Windows.Forms.MessageBox]::Show("Transcodage terminé pour tous les fichiers!", "Terminé", "OK", "Information")
+
+            } else { # ThreadJob not available, run sequentially
+                $logTextBox.AppendText("Starting transcoding process in single-thread mode (ThreadJob module not available)...`n")
+                foreach ($file in $filesToProcess) {
+                    if ($cancelProcessingButton.Enabled -eq $false) { # Check for cancellation
+                        $logTextBox.AppendText("Cancellation requested. Stopping sequential processing.`n")
+                        throw "Processing cancelled by user."
+                    }
+
+                    $logTextBox.AppendText("Processing file (sequentially): $($file.FullName)`n")
+
+                    # Construct arguments for Process-File
+                    $processFileArgs = @{
+                        inputFile       = $file.FullName
+                        outDir          = $outDir
+                        inputRoot       = $Global:inputRoot
+                        config          = $Global:config
+                        ffExePath       = $Global:ffExe
+                        ffProbePath     = $Global:ffProbeExe
+                        iamfEncoderPath = $Global:iamfEncoderExe
+                    }
+                    $currentFileResult = $null
+                    try {
+                        $currentFileResult = Process-File @processFileArgs
+
+                        if ($currentFileResult.Status -eq "SUCCESS") {
+                            $logTextBox.AppendText("File COMPLETED (sequential): $($currentFileResult.File)`n")
+                        } else {
+                            $logTextBox.AppendText("File FAILED (sequential): $($currentFileResult.File): $($currentFileResult.Message)`n")
+                        }
+                    } catch {
+                        $logTextBox.AppendText("File FAILED (sequential) with exception: $($file.FullName): $($_.Exception.Message)`n")
+                    }
+
+                    $overallProgressBar.PerformStep()
+                    [System.Windows.Forms.Application]::DoEvents() # Keep UI responsive
+                }
+                $logTextBox.AppendText("All sequential processing finished.`n")
+                [System.Windows.Forms.MessageBox]::Show("Transcodage séquentiel terminé pour tous les fichiers!", "Terminé (Séquentiel)", "OK", "Information")
+            }
 
         } catch {
             $logTextBox.AppendText("Error during processing: $($_.Exception.Message)`n")
