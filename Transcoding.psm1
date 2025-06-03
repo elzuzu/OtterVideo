@@ -73,27 +73,58 @@ function Process-File {
             if ($config.UseExternalIAMF -and $config.GrabIAMFTools -and (Test-Path $iamfEncoderPath)) {
                 # Encodage vidéo
                 $ffmpegVideoCmd = $commonArgs + $hwAccelArgs + @("-y", "-i", $inputFile) + $videoArgs + @($tempVideoFile)
-                # Run-Process is imported from Utils.psm1
-                $code = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegVideoCmd
-                if ($code -ne 0) { throw "Encodage vidéo H.266/VVC échoué (code $code)." }
+                $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegVideoCmd
+                if ($config.ShowFFmpegOutput) {
+                    if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (Video): $_" } }
+                    if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDERR (Video): $_" } }
+                }
+                if ($processResult.ExitCode -ne 0) {
+                    $errMsg = "Encodage vidéo H.266/VVC échoué (code $($processResult.ExitCode))."
+                    if (-not $config.ShowFFmpegOutput -and $processResult.StdErr) { $errMsg += " Stderr: $($processResult.StdErr | Out-String -Width 4096)" }
+                    throw $errMsg
+                }
 
                 # Extraction audio
                 $ffmpegAudioExtractCmd = $commonArgs + $hwAccelArgs + @("-y", "-i", $inputFile, "-vn", "-acodec", "pcm_s16le", "-ar", "48000", "-ac", "2", $tempAudioWav)
-                $code = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegAudioExtractCmd
-                if ($code -ne 0) { throw "Extraction audio WAV échouée (code $code)." }
+                $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegAudioExtractCmd
+                if ($config.ShowFFmpegOutput) {
+                    if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (AudioExtract): $_" } }
+                    if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDERR (AudioExtract): $_" } }
+                }
+                if ($processResult.ExitCode -ne 0) {
+                    $errMsg = "Extraction audio WAV échouée (code $($processResult.ExitCode))."
+                    if (-not $config.ShowFFmpegOutput -and $processResult.StdErr) { $errMsg += " Stderr: $($processResult.StdErr | Out-String -Width 4096)" }
+                    throw $errMsg
+                }
 
                 # Encodage IAMF externe
                 $bitValue = [regex]::Match($config.IamfBitrate, '^(\d+)k$').Groups[1].Value + "000"
                 $iamfArgs = @("-i", $tempAudioWav, "-o", $tempAudioIamf, "--mode", "0", "--bitrate", $bitValue)
-                $code = Run-Process -FilePath $iamfEncoderPath -ArgumentList $iamfArgs
-                if ($code -ne 0) { throw "Encodage IAMF externe échoué (code $code)." }
+                $processResult = Run-Process -FilePath $iamfEncoderPath -ArgumentList $iamfArgs
+                if ($config.ShowFFmpegOutput) { # Assuming same config controls IAMF encoder output visibility
+                    if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "IAMF_ENCODER_STDOUT: $_" } }
+                    if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "IAMF_ENCODER_STDERR: $_" } }
+                }
+                if ($processResult.ExitCode -ne 0) {
+                    $errMsg = "Encodage IAMF externe échoué (code $($processResult.ExitCode))."
+                    if (-not $config.ShowFFmpegOutput -and $processResult.StdErr) { $errMsg += " Stderr: $($processResult.StdErr | Out-String -Width 4096)" }
+                    throw $errMsg
+                }
 
                 # Muxage final
                 $ffmpegMuxCmd = $commonArgs + @("-y", "-i", $tempVideoFile, "-i", $tempAudioIamf, "-c", "copy")
                 if ($config.OutputContainer -eq "MP4") { $ffmpegMuxCmd += @("-movflags", "+faststart") }
                 $ffmpegMuxCmd += @($outputFile)
-                $code = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegMuxCmd
-                if ($code -ne 0) { throw "Muxage final échoué (code $code)." }
+                $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegMuxCmd
+                if ($config.ShowFFmpegOutput) {
+                    if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (Mux): $_" } }
+                    if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDERR (Mux): $_" } }
+                }
+                if ($processResult.ExitCode -ne 0) {
+                    $errMsg = "Muxage final échoué (code $($processResult.ExitCode))."
+                    if (-not $config.ShowFFmpegOutput -and $processResult.StdErr) { $errMsg += " Stderr: $($processResult.StdErr | Out-String -Width 4096)" }
+                    throw $errMsg
+                }
 
             } else {
                 # Encodeur interne IAMF ou fallback FLAC
@@ -109,17 +140,33 @@ function Process-File {
                 $ffmpegCmd = $commonArgs + $hwAccelArgs + @("-y", "-i", $inputFile) + $videoArgsSansAn + $audioEncArgs
                 if ($config.OutputContainer -eq "MP4") { $ffmpegCmd += @("-movflags", "+faststart") }
                 $ffmpegCmd += @($outputFile)
-                $code = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegCmd
-                if ($code -ne 0) { throw "Transcodage FFmpeg interne échoué (code $code)." }
+                $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegCmd
+                if ($config.ShowFFmpegOutput) {
+                    if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (Internal): $_" } }
+                    if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDERR (Internal): $_" } }
+                }
+                if ($processResult.ExitCode -ne 0) {
+                    $errMsg = "Transcodage FFmpeg interne échoué (code $($processResult.ExitCode))."
+                    if (-not $config.ShowFFmpegOutput -and $processResult.StdErr) { $errMsg += " Stderr: $($processResult.StdErr | Out-String -Width 4096)" }
+                    throw $errMsg
+                }
             }
         }
         # Si vidéo seule
         elseif ($hasVideo -and -not $hasAudio) {
-            $videoOnlyArgs = $videoArgs | Where-Object { $_ -ne "-an" }
+            $videoOnlyArgs = $videoArgs | Where-Object { $_ -ne "-an" } # Should already not contain -an if videoArgs is used as base
             $ffmpegCmd = $commonArgs + $hwAccelArgs + @("-y", "-i", $inputFile) + $videoOnlyArgs + @($outputFile)
             if ($config.OutputContainer -eq "MP4") { $ffmpegCmd += @("-movflags", "+faststart") }
-            $code = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegCmd
-            if ($code -ne 0) { throw "Encodage vidéo seule échoué (code $code)." }
+            $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegCmd
+            if ($config.ShowFFmpegOutput) {
+                if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (VideoOnly): $_" } }
+                if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDERR (VideoOnly): $_" } }
+            }
+            if ($processResult.ExitCode -ne 0) {
+                $errMsg = "Encodage vidéo seule échoué (code $($processResult.ExitCode))."
+                if (-not $config.ShowFFmpegOutput -and $processResult.StdErr) { $errMsg += " Stderr: $($processResult.StdErr | Out-String -Width 4096)" }
+                throw $errMsg
+            }
         }
         # Si audio seul
         elseif ($hasAudio -and -not $hasVideo) {
@@ -129,8 +176,16 @@ function Process-File {
                 $audioArgsOnly = @("-c:a", "flac")
             }
             $ffmpegCmd = $commonArgs + @("-y", "-i", $inputFile) + $audioArgsOnly + @($outputFile)
-            $code = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegCmd
-            if ($code -ne 0) { throw "Encodage audio seul échoué (code $code)." }
+            $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegCmd
+            if ($config.ShowFFmpegOutput) {
+                if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (AudioOnly): $_" } }
+                if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDERR (AudioOnly): $_" } }
+            }
+            if ($processResult.ExitCode -ne 0) {
+                $errMsg = "Encodage audio seul échoué (code $($processResult.ExitCode))."
+                if (-not $config.ShowFFmpegOutput -and $processResult.StdErr) { $errMsg += " Stderr: $($processResult.StdErr | Out-String -Width 4096)" }
+                throw $errMsg
+            }
         }
         else {
             throw "Aucun flux audio ou vidéo détecté dans le fichier."
