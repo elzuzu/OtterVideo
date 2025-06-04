@@ -268,6 +268,9 @@ function Show-MainApplicationWindow {
         $Global:config.TargetVideoHeight = [int]$tbTargetVideoHeight.Text
         $Global:config.MaxParallelJobs = [int]$tbMaxParallelJobs.Text
         $Global:config.ShowFFmpegOutput = $cbShowFFmpegOutput.Checked
+        $Global:config.InitialInputDir = $inDir
+        $Global:config.InitialOutputDir = $outDir
+        Save-UserConfig
 
         # Disable settings controls and Start button, enable Cancel button
         & $enableSettingsControls $false
@@ -491,6 +494,23 @@ function Show-MainApplicationWindow {
             }
         }
         $form.Close()
+    })
+
+    # Persist settings when the window is closed
+    $form.add_FormClosing({
+        $Global:config.UseAMD = $cbUseAMD.Checked
+        $Global:config.GrabIAMFTools = $cbGrabIAMFTools.Checked
+        $Global:config.UseExternalIAMF = $cbUseExternalIAMF.Checked
+        $Global:config.InputExtensions = ($tbInputExtensions.Text -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+        $Global:config.OutputContainer = $comboOutputContainer.SelectedItem
+        $Global:config.VvcQP = [int]$tbVvcQP.Text
+        $Global:config.IamfBitrate = $tbIamfBitrate.Text
+        $Global:config.TargetVideoHeight = [int]$tbTargetVideoHeight.Text
+        $Global:config.MaxParallelJobs = [int]$tbMaxParallelJobs.Text
+        $Global:config.ShowFFmpegOutput = $cbShowFFmpegOutput.Checked
+        if ($inputDirTextBox.Text -ne 'Not selected') { $Global:config.InitialInputDir = $inputDirTextBox.Text }
+        if ($outputDirTextBox.Text -ne 'Not selected') { $Global:config.InitialOutputDir = $outputDirTextBox.Text }
+        Save-UserConfig
     })
 
     $form.Show()

@@ -31,6 +31,36 @@ $Global:config = @{
     InitialOutputDir    = ""      # Will store last selected output directory
 }
 
+# Configuration file stored in the user's profile
+$Global:configFile = Join-Path $env:APPDATA "OtterVideo\config.json"
+
+function Load-UserConfig {
+    if (Test-Path $Global:configFile) {
+        try {
+            $json = Get-Content $Global:configFile -Raw | ConvertFrom-Json
+            foreach ($key in $json.PSObject.Properties.Name) {
+                $Global:config[$key] = $json.$key
+            }
+        } catch {
+            Write-Warning "Failed to load user config from $($Global:configFile): $($_.Exception.Message)"
+        }
+    }
+}
+
+function Save-UserConfig {
+    try {
+        $dir = Split-Path $Global:configFile -Parent
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        $Global:config | ConvertTo-Json -Depth 4 | Set-Content $Global:configFile
+    } catch {
+        Write-Warning "Failed to save user config to $($Global:configFile): $($_.Exception.Message)"
+    }
+}
+
+# Load user configuration if available
+Load-UserConfig
+
 # Export paths as global variables so they can be accessed by other modules
 Export-ModuleMember -Variable ffUrl, ffLocal, ffDir, ffExe, ffProbeExe, iamfToolsUrl, iamfToolsZip, iamfToolsDir, iamfEncoderExe
 Export-ModuleMember -Variable config
+Export-ModuleMember -Function Load-UserConfig, Save-UserConfig
