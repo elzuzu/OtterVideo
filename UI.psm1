@@ -84,10 +84,12 @@ function Show-MainApplicationWindow {
     $yPos += 30
 
     $cbGrabIAMFTools = Add-Checkbox "GrabIAMFTools" "Télécharger iamf-tools" $yPos $Global:config.GrabIAMFTools
+    $cbGrabIAMFTools.Visible = $false
     $yPos += 30
 
     $cbUseExternalIAMF = Add-Checkbox "UseExternalIAMF" "Utiliser iamf-encoder.exe (nécessite iamf-tools)" $yPos $Global:config.UseExternalIAMF
     $cbUseExternalIAMF.Enabled = $Global:config.GrabIAMFTools
+    $cbUseExternalIAMF.Visible = $false
     $cbGrabIAMFTools.add_CheckedChanged({
         $cbUseExternalIAMF.Enabled = $cbGrabIAMFTools.Checked
         if (-not $cbGrabIAMFTools.Checked) { $cbUseExternalIAMF.Checked = $false }
@@ -311,6 +313,22 @@ function Show-MainApplicationWindow {
             $overallProgressBar.Value = 0
             $Global:inputRoot = $inDir
             $jobList.Clear()
+
+            if (-not $Global:config) {
+                [System.Windows.Forms.MessageBox]::Show("Configuration globale non initialisée!", "Erreur", "OK", "Error")
+                throw "Global configuration missing"
+            }
+            $criticalVars = @{
+                'ffExe' = $ffExe
+                'ffProbeExe' = $ffProbeExe
+                'Global:inputRoot' = $Global:inputRoot
+            }
+            foreach ($varName in $criticalVars.Keys) {
+                if (-not $criticalVars[$varName]) {
+                    [System.Windows.Forms.MessageBox]::Show("Variable critique non définie: $varName", "Erreur", "OK", "Error")
+                    throw "Critical variable missing: $varName"
+                }
+            }
 
             if ($Global:config.ThreadJobAvailable) {
                 $logTextBox.AppendText("Starting transcoding process using ThreadJob...`n")

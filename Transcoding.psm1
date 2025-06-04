@@ -14,16 +14,33 @@ function Invoke-FileProcessing {
         [string]$ffProbePath,
         [string]$iamfEncoderPath
     )
+    $tempVideoFile = $null
+    $tempAudioWav  = $null
+    $tempAudioIamf = $null
+    $result = $null
     try {
         if (-not $config) { Write-Error "Transcoding.psm1: \$config hashtable not provided."; throw }
         if (-not $inputRoot) { Write-Error "Transcoding.psm1: \$inputRoot not provided."; throw }
+        if (-not $ffExePath -or -not (Test-Path $ffExePath)) { throw "ffExePath is null or invalid: '$ffExePath'" }
+        if (-not $ffProbePath -or -not (Test-Path $ffProbePath)) { throw "ffProbePath is null or invalid: '$ffProbePath'" }
+        if (-not $inputFile -or -not (Test-Path $inputFile)) { throw "inputFile is null or invalid: '$inputFile'" }
+        if (-not $outDir) { throw "outDir is null or empty: '$outDir'" }
 
         # Recherche des flux avec ffprobe
-        $probeJson = & "$ffProbePath" -v quiet -print_format json -show_streams $inputFile | ConvertFrom-Json
-        $hasVideo = $probeJson.streams | Where-Object { $_.codec_type -eq "video" }
-        $hasAudio = $probeJson.streams | Where-Object { $_.codec_type -eq "audio" }
+        try {
+            $probeOutput = & "$ffProbePath" -v quiet -print_format json -show_streams $inputFile 2>$null
+            if (-not $probeOutput) { throw "ffprobe returned no output for file: $inputFile" }
+            $probeJson = $probeOutput | ConvertFrom-Json
+            if (-not $probeJson -or -not $probeJson.streams) { throw "ffprobe JSON parsing failed or no streams found" }
+            $hasVideo = $probeJson.streams | Where-Object { $_.codec_type -eq "video" }
+            $hasAudio = $probeJson.streams | Where-Object { $_.codec_type -eq "audio" }
+        } catch {
+            Write-Error "Erreur lors de l'analyse avec ffprobe: $($_.Exception.Message)"
+            throw "Impossible d'analyser le fichier $inputFile"
+        }
 
         $baseName = [System.IO.Path]::GetFileNameWithoutExtension($inputFile)
+        if (-not $baseName) { throw "Impossible d'extraire le nom de base du fichier: $inputFile" }
         $ext = if ($config.OutputContainer -eq "MP4") { ".mp4" } else { ".mkv" }
         $outputFileName = "${baseName}_vvc${ext}"
 
@@ -44,6 +61,9 @@ function Invoke-FileProcessing {
         $tempVideoFile   = Join-Path $env:TEMP "${baseName}_tempvideo.mkv"
         $tempAudioWav    = Join-Path $env:TEMP "${baseName}_tempaudio.wav"
         $tempAudioIamf   = Join-Path $env:TEMP "${baseName}_tempiamf.mp4"
+        if (-not $tempVideoFile -or -not $tempAudioWav -or -not $tempAudioIamf) {
+            throw "Erreur lors de la création des noms de fichiers temporaires"
+        }
 
         # Construire les arguments communs de ffmpeg
         $commonArgs = @("-hide_banner")
@@ -186,14 +206,16 @@ function Invoke-FileProcessing {
             throw "Aucun flux audio ou vidéo détecté dans le fichier."
         }
 
-        # Nettoyage des fichiers temporaires
-        Remove-Item $tempVideoFile, $tempAudioWav, $tempAudioIamf -ErrorAction SilentlyContinue -Force
-        return @{File=$inputFile; Status="SUCCESS"}
+        $result = @{File=$inputFile; Status="SUCCESS"}
     } catch {
-        # Nettoyage même en cas d'erreur
-        Remove-Item $tempVideoFile, $tempAudioWav, $tempAudioIamf -ErrorAction SilentlyContinue -Force
-        return @{File=$inputFile; Status="ERROR"; Message=$_.Exception.Message}
+        Write-Error $_.Exception.Message
+        $result = @{File=$inputFile; Status="ERROR"; Message=$_.Exception.Message}
+    } finally {
+        if ($tempVideoFile -and (Test-Path $tempVideoFile)) { Remove-Item $tempVideoFile -ErrorAction SilentlyContinue -Force }
+        if ($tempAudioWav -and (Test-Path $tempAudioWav)) { Remove-Item $tempAudioWav -ErrorAction SilentlyContinue -Force }
+        if ($tempAudioIamf -and (Test-Path $tempAudioIamf)) { Remove-Item $tempAudioIamf -ErrorAction SilentlyContinue -Force }
     }
+    return $result
 }
 #endregion Fonction de traitement
 

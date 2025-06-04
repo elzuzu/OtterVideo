@@ -56,48 +56,40 @@ function Initialize-Tools {
         Write-Warning "ffprobe.exe non trouvé. Certaines fonctionnalités avancées pourraient être limitées."
     }
 
-    # Télécharger et décompresser iamf-tools si demandé
+    # Télécharger iamf-tools ? -> le projet ne fournit plus de binaires
     if ($Global:config.GrabIAMFTools) {
-        if (-not (Test-Path $iamfEncoderExe)) {
-            try {
-                Get-RemoteFile -Url $iamfToolsUrl -OutFile $iamfToolsZip -Description "iamf-tools"
-
-                $tempExtractDir = Join-Path $env:TEMP "iamf_extract_temp"
-                if (Test-Path $tempExtractDir) { Remove-Item -Recurse -Force $tempExtractDir }
-                New-Item -ItemType Directory -Path $tempExtractDir -Force | Out-Null
-
-                Expand-ArchiveFile -ArchivePath $iamfToolsZip -DestinationPath $tempExtractDir -Description "iamf-tools"
-
-                $extractedFolder = Get-ChildItem -Path $tempExtractDir -Directory | Select-Object -First 1
-                if ($extractedFolder) {
-                    if (Test-Path $iamfToolsDir) { Remove-Item -Recurse -Force $iamfToolsDir -ErrorAction SilentlyContinue }
-                    New-Item -ItemType Directory -Path ([System.IO.Path]::GetDirectoryName($iamfToolsDir)) -Force -ErrorAction SilentlyContinue | Out-Null
-                    Move-Item -Path $extractedFolder.FullName -Destination $iamfToolsDir -Force
-                    Write-Host "iamf-tools moved to $iamfToolsDir" -ForegroundColor Green
-                } else {
-                    throw "Could not find extracted folder in $tempExtractDir"
-                }
-                Remove-Item $tempExtractDir -Recurse -Force -ErrorAction SilentlyContinue
-                Remove-Item $iamfToolsZip -ErrorAction SilentlyContinue -Force
-
-                if (-not (Test-Path $iamfEncoderExe)) { throw "iamf-encoder.exe non trouvé après extraction et déplacement vers $iamfToolsDir." }
-                Write-Host "iamf-tools configuré : $iamfEncoderExe" -ForegroundColor Green
-            } catch {
-                Write-Warning "Impossible de préparer iamf-tools. L'option d'utiliser iamf-encoder.exe sera désactivée. Erreur: $($_.Exception.Message)"
-                $Global:config.UseExternalIAMF = $false
-            }
-        } else {
-            Write-Host "iamf-tools trouvé : $iamfEncoderExe" -ForegroundColor Green
-        }
+        Write-Warning "Les iamf-tools nécessitent une compilation depuis les sources."
+        Write-Host "Consulter: https://github.com/AOMediaCodec/iamf-tools/blob/main/docs/build_instructions.md" -ForegroundColor Yellow
+        Write-Host "L'option sera désactivée et l'encodeur FFmpeg interne sera utilisé." -ForegroundColor Yellow
+        $Global:config.GrabIAMFTools = $false
+        $Global:config.UseExternalIAMF = $false
     }
 
     # Vérifier l'encodeur IAMF interne si on ne compte pas utiliser l'externe
     if (-not $Global:config.UseExternalIAMF) {
         if (Test-Path $ffExe) {
-            $iamfInternalOK = & "$ffExe" -hide_banner -encoders | Select-String -Pattern " iamf\s" -Quiet
-        } else { 
-            $iamfInternalOK = $false 
+            try {
+                $encodersList = & "$ffExe" -hide_banner -encoders 2>$null | Out-String
+                $iamfInternalOK = $encodersList -match "^\s*A.*\s+iamf\s" -or
+                                  $encodersList -match "iamf" -or
+                                  $encodersList -match "IAMF"
+
+                Write-Host "=== Debug: Recherche encodeur IAMF ===" -ForegroundColor Cyan
+                Write-Host "Pattern trouvé: $iamfInternalOK" -ForegroundColor Yellow
+
+                if (-not $iamfInternalOK) {
+                    Write-Host "Encodeurs audio disponibles dans FFmpeg:" -ForegroundColor Yellow
+                    $audioEncoders = & "$ffExe" -hide_banner -encoders 2>$null | Select-String -Pattern "^\s*A" | Select-Object -First 5
+                    $audioEncoders | ForEach-Object { Write-Host "  $_" -ForegroundColor Gray }
+                }
+            } catch {
+                Write-Warning "Erreur lors de la vérification des encodeurs FFmpeg: $($_.Exception.Message)"
+                $iamfInternalOK = $false
+            }
+        } else {
+            $iamfInternalOK = $false
         }
+
         if (-not $iamfInternalOK) {
             Write-Warning "L'encodeur IAMF interne de FFmpeg n'a pas été trouvé. L'audio sera encodé en FLAC à la place."
         }
