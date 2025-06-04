@@ -52,12 +52,16 @@ function Expand-ArchiveFile {
         }
 
         if ($result.ExitCode -ne 0) {
-            throw "L'extraction a échoué avec le code $($result.ExitCode)."
+            Write-Host "7z Error Output: $($result.StdErr)" -ForegroundColor Red
+            Write-Host "Tentative avec Expand-Archive PowerShell..." -ForegroundColor Yellow
+
+            Expand-Archive -Path $ArchivePath -DestinationPath $DestinationPath -Force
+            Write-Host "$Description extrait avec succès (PowerShell fallback)." -ForegroundColor Green
+            return
         }
         Write-Host "$Description extrait avec succès." -ForegroundColor Green
     } catch {
         Write-Error "Échec de l'extraction de $Description : $($_.Exception.Message)"
-        if (Test-Path $ArchivePath) { Remove-Item $ArchivePath -ErrorAction SilentlyContinue -Force }
         throw "Extraction échouée."
     }
 }
@@ -117,6 +121,13 @@ function Start-ExternalProcess {
         [string]$FilePath,
         [array]$ArgumentList
     )
+    if (-not $FilePath -or [string]::IsNullOrWhiteSpace($FilePath)) {
+        throw "FilePath cannot be null or empty"
+    }
+    if (-not (Test-Path $FilePath)) {
+        throw "Executable not found: $FilePath"
+    }
+    if ($ArgumentList -eq $null) { $ArgumentList = @() }
     $stdoutLog = Join-Path $env:TEMP "stdout_$([guid]::NewGuid()).txt"
     $stderrLog = Join-Path $env:TEMP "stderr_$([guid]::NewGuid()).txt"
 

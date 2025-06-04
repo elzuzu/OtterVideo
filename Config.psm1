@@ -7,8 +7,10 @@ $Global:ffDir = Join-Path $PSScriptRoot "ffmpeg"
 $Global:ffExe = Join-Path (Join-Path $Global:ffDir "bin") "ffmpeg.exe"
 $Global:ffProbeExe = Join-Path (Join-Path $Global:ffDir "bin") "ffprobe.exe"
 
-# URL corrigée pour IAMF tools
-$Global:iamfToolsUrl = "https://github.com/AOMediaCodec/iamf-tools/releases/download/v1.0.0/iamf-tools-v1.0.0-windows-x64.zip"
+# URL des iamf-tools (aucun binaire officiel n'est fourni)
+# On laisse l'URL vers la dernière release à titre indicatif mais
+# l'option de téléchargement est désactivée par défaut.
+$Global:iamfToolsUrl = "https://github.com/AOMediaCodec/iamf-tools/releases/latest/download/iamf-tools-windows-x64.zip"
 $Global:iamfToolsZip = Join-Path $PSScriptRoot "iamf-tools.zip"
 $Global:iamfToolsDir = Join-Path $PSScriptRoot "iamf-tools"
 $Global:iamfEncoderExe = Join-Path $Global:iamfToolsDir "iamf_encoder.exe" # Nom correct du fichier
