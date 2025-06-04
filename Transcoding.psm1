@@ -37,7 +37,7 @@ function Invoke-FileProcessing {
             $outputFile = Join-Path $outDir $outputFileName
         }
 
-        Write-Host "Processus file: $inputFile" -ForegroundColor White
+        Write-Host "Traitement du fichier : $inputFile" -ForegroundColor White
         Write-Host "→ Sortie   : $outputFile" -ForegroundColor White
 
         # Fichiers temporaires
