@@ -1,17 +1,17 @@
-ï»¿# Config.psm1 - Configuration settings for ov.ps1
-# This file will hold parameters, paths, URLs, and default configuration values.
+﻿# Config.psm1 - Configuration settings for ov.ps1 - URLs corrigées
 
 # Chemins et URLs (moved from ov.ps1)
-$ffUrl = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
-$ffLocal = Join-Path $PSScriptRoot "ffmpeg.zip"
-$ffDir = Join-Path $PSScriptRoot "ffmpeg"
-$ffExe = Join-Path (Join-Path $ffDir "bin") "ffmpeg.exe"
-$ffProbeExe = Join-Path (Join-Path $ffDir "bin") "ffprobe.exe"
+$Global:ffUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
+$Global:ffLocal = Join-Path $PSScriptRoot "ffmpeg.zip"
+$Global:ffDir = Join-Path $PSScriptRoot "ffmpeg"
+$Global:ffExe = Join-Path (Join-Path $Global:ffDir "bin") "ffmpeg.exe"
+$Global:ffProbeExe = Join-Path (Join-Path $Global:ffDir "bin") "ffprobe.exe"
 
-$iamfToolsUrl = "https://github.com/AOMediaCodec/iamf/releases/latest/download/iamf-tools-windows-latest.zip" # Official URL for IAMF tools
-$iamfToolsZip = Join-Path $PSScriptRoot "iamf-tools.zip"
-$iamfToolsDir = Join-Path $PSScriptRoot "iamf-tools"
-$iamfEncoderExe = Join-Path $iamfToolsDir "iamf-encoder.exe" # Path to the IAMF encoder executable
+# URL corrigée pour IAMF tools
+$Global:iamfToolsUrl = "https://github.com/AOMediaCodec/iamf-tools/releases/download/v1.0.0/iamf-tools-v1.0.0-windows-x64.zip"
+$Global:iamfToolsZip = Join-Path $PSScriptRoot "iamf-tools.zip"
+$Global:iamfToolsDir = Join-Path $PSScriptRoot "iamf-tools"
+$Global:iamfEncoderExe = Join-Path $Global:iamfToolsDir "iamf_encoder.exe" # Nom correct du fichier
 
 # Valeurs par défaut pour les paramètres configurables
 $Global:config = @{
@@ -26,12 +26,11 @@ $Global:config = @{
     MaxParallelJobs     = 2       # Nombre de jobs simultanés (entier)
     ShowFFmpegOutput    = $true   # Afficher la sortie complète de ffmpeg
     ThreadJobAvailable  = $true # Will be set to false by Setup.psm1 if ThreadJob can't be loaded
+    iamfInternalAvailable = $false # Will be set by Setup.psm1 based on FFmpeg capabilities
+    InitialInputDir     = ""      # Will store last selected input directory
+    InitialOutputDir    = ""      # Will store last selected output directory
 }
 
-# Export members
-Export-ModuleMember -Variable * -Function *
-# Specifically ensuring $Global:config is available.
-# If $Global:config is intended to be modified from outside and changes reflected globally,
-# this direct export might be sufficient for script modules, but for binary modules,
-# getter/setter functions are often preferred. For .psm1, this should work.
-Export-ModuleMember -Variable "Global:config"
+# Export paths as global variables so they can be accessed by other modules
+Export-ModuleMember -Variable ffUrl, ffLocal, ffDir, ffExe, ffProbeExe, iamfToolsUrl, iamfToolsZip, iamfToolsDir, iamfEncoderExe
+Export-ModuleMember -Variable config

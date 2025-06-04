@@ -1,24 +1,22 @@
-ï»¿# Transcoding.psm1 - Core file processing logic for ov.ps1
+﻿# Transcoding.psm1 - Core file processing logic for ov.ps1
 
-# Import utility functions (for Run-Process)
+# Import utility functions (for Start-ExternalProcess)
 Import-Module .\Utils.psm1 -Force
 
 #region Fonction de traitement d'un seul fichier
-function Process-File {
+function Invoke-FileProcessing {
     param(
         [string]$inputFile,
         [string]$outDir,
-        [string]$inputRoot, # Added parameter to replace $Global:inputRoot
+        [string]$inputRoot,
         [hashtable]$config,
         [string]$ffExePath,
         [string]$ffProbePath,
         [string]$iamfEncoderPath
     )
     try {
-        # Check for critical global variables/config elements if needed (e.g. $config itself)
         if (-not $config) { Write-Error "Transcoding.psm1: \$config hashtable not provided."; throw }
         if (-not $inputRoot) { Write-Error "Transcoding.psm1: \$inputRoot not provided."; throw }
-
 
         # Recherche des flux avec ffprobe
         $probeJson = & "$ffProbePath" -v quiet -print_format json -show_streams $inputFile | ConvertFrom-Json
@@ -30,7 +28,6 @@ function Process-File {
         $outputFileName = "${baseName}_vvc${ext}"
 
         # Gérer la structure de sous-dossiers
-        # Use the $inputRoot parameter instead of $Global:inputRoot
         $relativePath = [System.IO.Path]::GetDirectoryName($inputFile).Substring($inputRoot.Length)
         if ($relativePath) {
             $targetSubDir = Join-Path $outDir $relativePath
@@ -50,7 +47,6 @@ function Process-File {
 
         # Construire les arguments communs de ffmpeg
         $commonArgs = @("-hide_banner")
-        # Accessing $config which is passed as a parameter
         if (-not $config.ShowFFmpegOutput) { $commonArgs += @("-loglevel", "error") } else { $commonArgs += @("-stats") }
 
         # Arguments hardware si AMD
@@ -73,7 +69,7 @@ function Process-File {
             if ($config.UseExternalIAMF -and $config.GrabIAMFTools -and (Test-Path $iamfEncoderPath)) {
                 # Encodage vidéo
                 $ffmpegVideoCmd = $commonArgs + $hwAccelArgs + @("-y", "-i", $inputFile) + $videoArgs + @($tempVideoFile)
-                $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegVideoCmd
+                $processResult = Start-ExternalProcess -FilePath $ffExePath -ArgumentList $ffmpegVideoCmd
                 if ($config.ShowFFmpegOutput) {
                     if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (Video): $_" } }
                     if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDERR (Video): $_" } }
@@ -86,7 +82,7 @@ function Process-File {
 
                 # Extraction audio
                 $ffmpegAudioExtractCmd = $commonArgs + $hwAccelArgs + @("-y", "-i", $inputFile, "-vn", "-acodec", "pcm_s16le", "-ar", "48000", "-ac", "2", $tempAudioWav)
-                $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegAudioExtractCmd
+                $processResult = Start-ExternalProcess -FilePath $ffExePath -ArgumentList $ffmpegAudioExtractCmd
                 if ($config.ShowFFmpegOutput) {
                     if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (AudioExtract): $_" } }
                     if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDERR (AudioExtract): $_" } }
@@ -100,8 +96,8 @@ function Process-File {
                 # Encodage IAMF externe
                 $bitValue = [regex]::Match($config.IamfBitrate, '^(\d+)k$').Groups[1].Value + "000"
                 $iamfArgs = @("-i", $tempAudioWav, "-o", $tempAudioIamf, "--mode", "0", "--bitrate", $bitValue)
-                $processResult = Run-Process -FilePath $iamfEncoderPath -ArgumentList $iamfArgs
-                if ($config.ShowFFmpegOutput) { # Assuming same config controls IAMF encoder output visibility
+                $processResult = Start-ExternalProcess -FilePath $iamfEncoderPath -ArgumentList $iamfArgs
+                if ($config.ShowFFmpegOutput) {
                     if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "IAMF_ENCODER_STDOUT: $_" } }
                     if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "IAMF_ENCODER_STDERR: $_" } }
                 }
@@ -115,7 +111,7 @@ function Process-File {
                 $ffmpegMuxCmd = $commonArgs + @("-y", "-i", $tempVideoFile, "-i", $tempAudioIamf, "-c", "copy")
                 if ($config.OutputContainer -eq "MP4") { $ffmpegMuxCmd += @("-movflags", "+faststart") }
                 $ffmpegMuxCmd += @($outputFile)
-                $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegMuxCmd
+                $processResult = Start-ExternalProcess -FilePath $ffExePath -ArgumentList $ffmpegMuxCmd
                 if ($config.ShowFFmpegOutput) {
                     if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (Mux): $_" } }
                     if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDERR (Mux): $_" } }
@@ -140,7 +136,7 @@ function Process-File {
                 $ffmpegCmd = $commonArgs + $hwAccelArgs + @("-y", "-i", $inputFile) + $videoArgsSansAn + $audioEncArgs
                 if ($config.OutputContainer -eq "MP4") { $ffmpegCmd += @("-movflags", "+faststart") }
                 $ffmpegCmd += @($outputFile)
-                $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegCmd
+                $processResult = Start-ExternalProcess -FilePath $ffExePath -ArgumentList $ffmpegCmd
                 if ($config.ShowFFmpegOutput) {
                     if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (Internal): $_" } }
                     if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDERR (Internal): $_" } }
@@ -154,10 +150,9 @@ function Process-File {
         }
         # Si vidéo seule
         elseif ($hasVideo -and -not $hasAudio) {
-            # $videoArgs should already contain -an for video-only processing
             $ffmpegCmd = $commonArgs + $hwAccelArgs + @("-y", "-i", $inputFile) + $videoArgs + @($outputFile)
             if ($config.OutputContainer -eq "MP4") { $ffmpegCmd += @("-movflags", "+faststart") }
-            $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegCmd
+            $processResult = Start-ExternalProcess -FilePath $ffExePath -ArgumentList $ffmpegCmd
             if ($config.ShowFFmpegOutput) {
                 if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (VideoOnly): $_" } }
                 if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDERR (VideoOnly): $_" } }
@@ -175,9 +170,8 @@ function Process-File {
             } else {
                 $audioArgsOnly = @("-c:a", "flac")
             }
-            # explicitly add -vn
             $ffmpegCmd = $commonArgs + @("-y", "-i", $inputFile, "-vn") + $audioArgsOnly + @($outputFile)
-            $processResult = Run-Process -FilePath $ffExePath -ArgumentList $ffmpegCmd
+            $processResult = Start-ExternalProcess -FilePath $ffExePath -ArgumentList $ffmpegCmd
             if ($config.ShowFFmpegOutput) {
                 if ($processResult.StdOut) { $processResult.StdOut -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDOUT (AudioOnly): $_" } }
                 if ($processResult.StdErr) { $processResult.StdErr -split "`r?`n" | ForEach-Object { Write-Host "FFMPEG_STDERR (AudioOnly): $_" } }
@@ -203,4 +197,4 @@ function Process-File {
 }
 #endregion Fonction de traitement
 
-Export-ModuleMember -Function Process-File
+Export-ModuleMember -Function Invoke-FileProcessing

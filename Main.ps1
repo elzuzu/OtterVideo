@@ -1,4 +1,4 @@
-ï»¿<#
+﻿<#
 .SYNOPSIS
     Script avancé pour le transcodage par lots en VVC (lossless) et audio IAMF,
     avec interface utilisateur, validation, et multithreading via ThreadJob.
@@ -47,13 +47,9 @@ Import-Module .\Utils.psm1 -Force
 Import-Module .\UI.psm1 -Force
 
 # Import Setup functions from Setup.psm1
-# Ensure-ThreadJob and Prepare-Tools are called from UI.psm1.
-# UI.psm1 now imports Setup.psm1 directly.
 Import-Module .\Setup.psm1 -Force
 
 # Import Transcoding functions from Transcoding.psm1
-# Process-File is called from UI.psm1 via Start-ThreadJob.
-# UI.psm1 now imports Transcoding.psm1 directly.
 Import-Module .\Transcoding.psm1 -Force
 
 #endregion Paramètres initiaux

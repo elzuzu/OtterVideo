@@ -1,12 +1,12 @@
-ï»¿# Utils.psm1 - Utility functions for ov.ps1
+﻿# Utils.psm1 - Utility functions for ov.ps1
 
 #region Fonctions Utilitaires
-function Test-CommandExists {
+function Test-Command {
     param($command)
     return [bool](Get-Command $command -ErrorAction SilentlyContinue)
 }
 
-function Download-File {
+function Get-RemoteFile {
     param(
         [string]$Url,
         [string]$OutFile,
@@ -22,7 +22,7 @@ function Download-File {
     }
 }
 
-function Extract-Archive {
+function Expand-ArchiveFile {
     param(
         [string]$ArchivePath,
         [string]$DestinationPath,
@@ -30,19 +30,13 @@ function Extract-Archive {
     )
     Write-Host "Extraction de $Description..." -ForegroundColor Cyan
     try {
-        # Ensure dependent commands are available or handled within the function
-        if (Test-CommandExists "7z") {
+        if (Test-Command "7z") {
             Start-Process -FilePath "7z" -ArgumentList "x", "`"$ArchivePath`"", "-o`"$DestinationPath`"", "-y" -Wait -NoNewWindow
         } else {
-            # Consider if Download-File should be used here or if 7zr.exe is expected to be handled by the main script's Prepare-Tools
-            # For now, keeping the original logic which includes downloading 7zr.exe if needed.
-            # This creates a dependency from Utils.psm1 back to Download-File if it were not also in Utils.psm1
-            # Since Download-File is part of this Utils module, this is fine.
             $zipExeUrl = "https://www.7-zip.org/a/7zr.exe"
             $zipExeLocal = Join-Path $env:TEMP "7zr.exe"
             if (-not (Test-Path $zipExeLocal)) {
-                # Calling Download-File which is also in this module
-                Download-File -Url $zipExeUrl -OutFile $zipExeLocal -Description "7-Zip portable (7zr.exe)"
+                Get-RemoteFile -Url $zipExeUrl -OutFile $zipExeLocal -Description "7-Zip portable (7zr.exe)"
             }
             Start-Process -FilePath $zipExeLocal -ArgumentList "x", "`"$ArchivePath`"", "-o`"$DestinationPath`"", "-y" -Wait -NoNewWindow
         }
@@ -58,28 +52,26 @@ function Extract-Archive {
     }
 }
 
-function Pick-Folder {
+function Get-Folder {
     param(
         [string]$Message,
-        [string]$InitialDirectory # Added to make it more generic, ov.ps1 can pass $InitialInputDir or $InitialOutputDir
+        [string]$InitialDirectory
     )
     Add-Type -AssemblyName System.Windows.Forms
     $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
     $dialog.Description = $Message
-    if ($InitialDirectory -and (Test-Path $InitialDirectory)) { $dialog.SelectedPath = $InitialDirectory }
-
-    # The original ov.ps1 had specific logic for $InitialInputDir and $InitialOutputDir.
-    # This is a more generic version. The calling script ov.ps1 will need to pass the correct initial path.
-    # For example: Pick-Folder "Select Source" $InitialInputDir
+    if ($InitialDirectory -and (Test-Path $InitialDirectory)) { 
+        $dialog.SelectedPath = $InitialDirectory 
+    }
 
     if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
         return $dialog.SelectedPath
     } else {
-        throw "Opération annulée par l'utilisateur."
+        return $null
     }
 }
 
-function Validate-Integer {
+function Test-IntegerValue {
     param(
         [string]$Value,
         [string]$FieldName,
@@ -98,12 +90,11 @@ function Validate-Integer {
     return $true
 }
 
-function Validate-Bitrate {
+function Test-BitrateValue {
     param(
         [string]$Value,
         [string]$FieldName
     )
-    # Format attendu : nombre suivi de 'k', exemple '384k'
     if ($Value -notmatch '^[0-9]+k$') {
         [System.Windows.Forms.MessageBox]::Show("'$Value' n'est pas un débit valide (ex: 384k) pour $FieldName.", "Erreur", 'OK', 'Error')
         return $false
@@ -111,17 +102,11 @@ function Validate-Bitrate {
     return $true
 }
 
-function Run-Process {
+function Start-ExternalProcess {
     param(
         [string]$FilePath,
         [array]$ArgumentList
     )
-    # If Run-Process needs to access $Global:config.ShowFFmpegOutput,
-    # it must be passed in or Utils.psm1 must also import Config.psm1 (which might be too coupled).
-    # For now, let's assume $GlobalConfig will be passed if specific config values are needed.
-    # The original Run-Process directly accessed $Global:config.ShowFFmpegOutput.
-    # To maintain that, $Global:config would need to be accessible.
-    # Since Config.psm1 exports $Global:config to the global scope, it *should* be accessible.
     $stdoutLog = Join-Path $env:TEMP "stdout_$([guid]::NewGuid()).txt"
     $stderrLog = Join-Path $env:TEMP "stderr_$([guid]::NewGuid()).txt"
 
@@ -142,13 +127,12 @@ function Run-Process {
             StdErr   = $stderrContent
         }
     } catch {
-        # Ensure temp files are cleaned up even if Start-Process fails to launch
         if (Test-Path $stdoutLog) { Remove-Item $stdoutLog -ErrorAction SilentlyContinue -Force }
         if (Test-Path $stderrLog) { Remove-Item $stderrLog -ErrorAction SilentlyContinue -Force }
 
         Write-Error "Échec du lancement du processus $FilePath : $($_.Exception.Message)"
         return @{
-            ExitCode = -1 # Or a more specific error code for launch failure
+            ExitCode = -1
             StdOut   = ""
             StdErr   = "Failed to start process ${FilePath}: $($_.Exception.Message)"
         }
@@ -156,4 +140,4 @@ function Run-Process {
 }
 #endregion Fonctions Utilitaires
 
-Export-ModuleMember -Function Test-CommandExists, Download-File, Extract-Archive, Pick-Folder, Validate-Integer, Validate-Bitrate, Run-Process
+Export-ModuleMember -Function Test-Command, Get-RemoteFile, Expand-ArchiveFile, Get-Folder, Test-IntegerValue, Test-BitrateValue, Start-ExternalProcess
