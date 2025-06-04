@@ -8,7 +8,7 @@ The script is designed to automate the download and setup of necessary external 
 
 ## 2. Features
 
-*   **User-Friendly GUI**: Configure all transcoding options through a Windows Forms interface.
+*   **User-Friendly GUI**: Configure all transcoding options through a Windows Forms interface. Settings are automatically saved in your user profile for the next launch.
 *   **Batch Processing**: Process multiple files from an input directory, maintaining subdirectory structures in the output.
 *   **VVC (H.266) Video Encoding**: Transcode video streams to VVC using FFmpeg with `libvvenc`.
     *   Configurable QP (Quantization Parameter) for quality control (0 for lossless).
