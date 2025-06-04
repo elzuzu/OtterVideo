@@ -30,6 +30,8 @@ function Show-MainApplicationWindow {
 
     # Initialize Job List for managing running transcode jobs
     $jobList = [System.Collections.Generic.List[System.Management.Automation.Job]]::new()
+    # Root path for module imports inside ThreadJobs
+    $moduleRoot = $PSScriptRoot
 
     $yPos = 10
 
@@ -349,10 +351,11 @@ function Show-MainApplicationWindow {
                                     $logTextBox.AppendText("ERROR ($($j.Name) stream): $($errRecord.ToString())`n")
                                 }
 
-                                if ($jobOutputData.Status -eq "SUCCESS") {
+                                if ($jobOutputData -and $jobOutputData.Status -eq "SUCCESS") {
                                     $logTextBox.AppendText("Job COMPLETED: $($j.Name) for file $($jobOutputData.File)`n")
                                 } else {
-                                    $logTextBox.AppendText("Job FAILED: $($j.Name) for file $($jobOutputData.File): $($jobOutputData.Message)`n")
+                                    $errMsg = if ($jobOutputData) { $jobOutputData.Message } else { "Job failed with unknown error" }
+                                    $logTextBox.AppendText("Job FAILED: $($j.Name) - Error: $errMsg`n")
                                 }
 
                                 $overallProgressBar.PerformStep()
@@ -371,7 +374,11 @@ function Show-MainApplicationWindow {
 
                     $jobName = "Transcode_$($file.BaseName)"
                     $jobArguments = $file.FullName, $outDir, $Global:inputRoot, $Global:config, $ffExe, $ffProbeExe, $iamfEncoderExe
-                    $job = Start-ThreadJob -Name $jobName -ScriptBlock ${function:Invoke-FileProcessing} -ArgumentList $jobArguments
+                    $initScript = {
+                        Import-Module (Join-Path $using:moduleRoot 'Utils.psm1') -Force
+                        Import-Module (Join-Path $using:moduleRoot 'Transcoding.psm1') -Force
+                    }
+                    $job = Start-ThreadJob -Name $jobName -InitializationScript $initScript -ScriptBlock ${function:Invoke-FileProcessing} -ArgumentList $jobArguments
                     $jobList.Add($job)
                     $logTextBox.AppendText("Job STARTED: $($job.Name)`n")
                 }
@@ -393,10 +400,11 @@ function Show-MainApplicationWindow {
                                 $logTextBox.AppendText("ERROR ($($j.Name) stream): $($errRecord.ToString())`n")
                             }
 
-                            if ($jobOutputData.Status -eq "SUCCESS") {
+                            if ($jobOutputData -and $jobOutputData.Status -eq "SUCCESS") {
                                 $logTextBox.AppendText("Job COMPLETED: $($j.Name) for file $($jobOutputData.File)`n")
                             } else {
-                                $logTextBox.AppendText("Job FAILED: $($j.Name) for file $($jobOutputData.File): $($jobOutputData.Message)`n")
+                                $errMsg = if ($jobOutputData) { $jobOutputData.Message } else { "Job failed with unknown error" }
+                                $logTextBox.AppendText("Job FAILED: $($j.Name) - Error: $errMsg`n")
                             }
 
                             $overallProgressBar.PerformStep()
