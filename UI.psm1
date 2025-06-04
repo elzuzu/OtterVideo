@@ -86,12 +86,12 @@ function Show-MainApplicationWindow {
     $yPos += 30
 
     $cbGrabIAMFTools = Add-Checkbox "GrabIAMFTools" "Télécharger iamf-tools" $yPos $Global:config.GrabIAMFTools
-    $cbGrabIAMFTools.Visible = $false
+    $cbGrabIAMFTools.Visible = $true
     $yPos += 30
 
     $cbUseExternalIAMF = Add-Checkbox "UseExternalIAMF" "Utiliser iamf-encoder.exe (nécessite iamf-tools)" $yPos $Global:config.UseExternalIAMF
     $cbUseExternalIAMF.Enabled = $Global:config.GrabIAMFTools
-    $cbUseExternalIAMF.Visible = $false
+    $cbUseExternalIAMF.Visible = $true
     $cbGrabIAMFTools.add_CheckedChanged({
         $cbUseExternalIAMF.Enabled = $cbGrabIAMFTools.Checked
         if (-not $cbGrabIAMFTools.Checked) { $cbUseExternalIAMF.Checked = $false }
