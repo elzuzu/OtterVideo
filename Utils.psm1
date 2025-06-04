@@ -14,7 +14,15 @@ function Get-RemoteFile {
     )
     Write-Host "Téléchargement de $Description..." -ForegroundColor Cyan
     try {
-        Invoke-WebRequest $Url -OutFile $OutFile -UseBasicParsing -TimeoutSec 600 -ErrorAction Stop
+        if (Test-Command "curl") {
+            $curlArgs = @("-L", "-o", $OutFile, $Url)
+            $result = Start-ExternalProcess -FilePath "curl" -ArgumentList $curlArgs
+            if ($result.ExitCode -ne 0) {
+                throw "curl exit code $($result.ExitCode): $($result.StdErr)"
+            }
+        } else {
+            Invoke-WebRequest $Url -OutFile $OutFile -UseBasicParsing -TimeoutSec 600 -ErrorAction Stop
+        }
         Write-Host "$Description téléchargé avec succès." -ForegroundColor Green
     } catch {
         Write-Error "Échec du téléchargement de $Description depuis $Url : $($_.Exception.Message)"
@@ -31,18 +39,20 @@ function Expand-ArchiveFile {
     Write-Host "Extraction de $Description..." -ForegroundColor Cyan
     try {
         if (Test-Command "7z") {
-            Start-Process -FilePath "7z" -ArgumentList "x", "`"$ArchivePath`"", "-o`"$DestinationPath`"", "-y" -Wait -NoNewWindow
+            $args = @("x", $ArchivePath, "-o$DestinationPath", "-y")
+            $result = Start-ExternalProcess -FilePath "7z" -ArgumentList $args
         } else {
             $zipExeUrl = "https://www.7-zip.org/a/7zr.exe"
             $zipExeLocal = Join-Path $env:TEMP "7zr.exe"
             if (-not (Test-Path $zipExeLocal)) {
                 Get-RemoteFile -Url $zipExeUrl -OutFile $zipExeLocal -Description "7-Zip portable (7zr.exe)"
             }
-            Start-Process -FilePath $zipExeLocal -ArgumentList "x", "`"$ArchivePath`"", "-o`"$DestinationPath`"", "-y" -Wait -NoNewWindow
+            $args = @("x", $ArchivePath, "-o$DestinationPath", "-y")
+            $result = Start-ExternalProcess -FilePath $zipExeLocal -ArgumentList $args
         }
 
-        if ($LASTEXITCODE -ne 0) {
-            throw "L'extraction a échoué avec le code $LASTEXITCODE."
+        if ($result.ExitCode -ne 0) {
+            throw "L'extraction a échoué avec le code $($result.ExitCode)."
         }
         Write-Host "$Description extrait avec succès." -ForegroundColor Green
     } catch {

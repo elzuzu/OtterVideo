@@ -32,6 +32,19 @@ function Initialize-Tools {
             Get-RemoteFile -Url $ffUrl -OutFile $ffLocal -Description "FFmpeg"
             Expand-ArchiveFile -ArchivePath $ffLocal -DestinationPath $ffDir -Description "FFmpeg"
             Remove-Item $ffLocal -ErrorAction SilentlyContinue -Force
+
+            if (-not (Test-Path $ffExe)) {
+                $foundExe = Get-ChildItem -Path $ffDir -Recurse -Filter ffmpeg.exe | Select-Object -First 1
+                if ($foundExe) {
+                    $newBinDir = Split-Path $foundExe.FullName -Parent
+                    $Global:ffDir = Split-Path $newBinDir -Parent
+                    $Global:ffExe = $foundExe.FullName
+                    $Global:ffProbeExe = Join-Path $newBinDir 'ffprobe.exe'
+                    Write-Host "Chemin FFmpeg ajusté : $Global:ffExe" -ForegroundColor Yellow
+                } else {
+                    throw "ffmpeg.exe introuvable après extraction."
+                }
+            }
         } catch {
             Write-Error "Impossible de préparer FFmpeg. Le script ne peut pas continuer."
             throw

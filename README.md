@@ -44,6 +44,7 @@ The script is designed to automate the download and setup of necessary external 
     *   (The script attempts to install `ThreadJob` module which is compatible with these versions).
 *   **.NET Framework/Core**: Required for PowerShell and Windows Forms. Usually comes pre-installed with Windows or with PowerShell 7.
 *   **Internet Connection**: Required for the initial download of FFmpeg, IAMF tools, 7zr.exe (if needed), and the `ThreadJob` module.
+*   **curl**: Recommended for downloading the external tools. If unavailable, the script falls back to PowerShell's `Invoke-WebRequest`.
 *   **Execution Policy**: You may need to adjust your PowerShell execution policy to run scripts. For example:
     ```powershell
     Set-ExecutionPolicy RemoteSigned -Scope CurrentUser
@@ -97,6 +98,7 @@ This script relies on the following external tools, which it attempts to manage 
 *   **ffprobe**: Part of FFmpeg, used for stream analysis.
 *   **IAMF Tools**: Specifically `iamf-encoder.exe` for encoding IAMF audio when the external option is selected. Downloaded from [AOMediaCodec GitHub releases](https://github.com/AOMediaCodec/iamf/releases).
 *   **7-Zip (7zr.exe)**: Portable command-line version of 7-Zip, downloaded if needed for extracting archives (`.zip`, `.7z`). Downloaded from [7-zip.org](https://www.7-zip.org).
+*   **curl**: Used for downloading the external tools when available. If `curl` is not found, the script falls back to `Invoke-WebRequest`.
 
 ## 7. Troubleshooting
 
