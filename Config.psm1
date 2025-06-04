@@ -1,8 +1,8 @@
 ﻿# Config.psm1 - Configuration settings for ov.ps1 - URLs corrigées
 
 # Chemins et URLs (moved from ov.ps1)
-$Global:ffUrl = "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-win64-gpl.zip"
-$Global:ffLocal = Join-Path $PSScriptRoot "ffmpeg.zip"
+$Global:ffUrl = "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z"
+$Global:ffLocal = Join-Path $PSScriptRoot "ffmpeg.7z"
 $Global:ffDir = Join-Path $PSScriptRoot "ffmpeg"
 $Global:ffExe = Join-Path (Join-Path $Global:ffDir "bin") "ffmpeg.exe"
 $Global:ffProbeExe = Join-Path (Join-Path $Global:ffDir "bin") "ffprobe.exe"
