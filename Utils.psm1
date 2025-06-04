@@ -14,9 +14,10 @@ function Get-RemoteFile {
     )
     Write-Host "Téléchargement de $Description..." -ForegroundColor Cyan
     try {
-        if (Test-Command "curl") {
+        $curlCmd = Get-Command curl -ErrorAction SilentlyContinue
+        if ($curlCmd -and $curlCmd.CommandType -eq 'Application') {
             $curlArgs = @("-L", "-o", $OutFile, $Url)
-            $result = Start-ExternalProcess -FilePath "curl" -ArgumentList $curlArgs
+            $result = Start-ExternalProcess -FilePath $curlCmd.Source -ArgumentList $curlArgs
             if ($result.ExitCode -ne 0) {
                 throw "curl exit code $($result.ExitCode): $($result.StdErr)"
             }
